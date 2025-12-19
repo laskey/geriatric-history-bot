@@ -1,3 +1,5 @@
 # Environment Files
-
 .env
+
+# Output files (contain PHI in production)
+output/

@@ -187,15 +187,17 @@ At $0.75/call, 20 calls/day = $15/day = ~$4,000/year (vs $60-80K for intake nurs
 ## Development Phases
 
 ### Phase 1: POC (Current)
-- [ ] Browser-based WebRTC audio capture
-- [ ] WebSocket backend handling tool calls
-- [ ] Simulated patient testing
-- [ ] Output generation and review
+- [x] Python backend with state management and tool handlers
+- [x] Text-based simulation mode for rapid iteration
+- [x] System prompt with conversation flow
+- [x] Structured JSON output generation
+- [ ] Browser-based WebRTC audio capture (TypeScript frontend)
+- [ ] Sideband connection between frontend and backend
 
 ### Phase 2: Iteration
 - [ ] Test with colleagues roleplaying patients
 - [ ] Refine prompt based on failure modes
-- [ ] Clinical review of output quality with Lindy
+- [ ] Clinical review of output quality
 - [ ] Handle edge cases (confused patients, tangential conversations)
 
 ### Phase 3: Production Readiness
@@ -207,32 +209,33 @@ At $0.75/call, 20 calls/day = $15/day = ~$4,000/year (vs $60-80K for intake nurs
 ## File Structure
 
 ```
-geriatric-voice-ai/
-├── README.md                           # Project overview
-├── PROJECT_SPEC.md                     # This file
+geriatric-history-bot/
+├── .claude/
+│   └── CLAUDE.md                       # Instructions for Claude Code
 ├── docs/
+│   ├── PROJECT_SPEC.md                 # This file
 │   └── realtime-api/                   # Downloaded API documentation
 │       ├── realtime-guide.md
 │       ├── realtime-prompting.md
-│       └── realtime-costs.md
+│       ├── realtime-costs.md
+│       ├── developer-notes.md
+│       └── realtime-server-controls.md # Sideband WebSocket patterns
 ├── src/
 │   ├── config/
 │   │   ├── system_prompt.py            # The main prompt configuration
-│   │   ├── tools.py                    # Tool definitions
-│   │   └── session_config.py           # Realtime API session settings
+│   │   └── tools.py                    # Tool definitions
 │   ├── backend/
 │   │   ├── realtime_connection.py      # WebSocket connection handler
 │   │   ├── tool_handlers.py            # Tool execution logic
 │   │   ├── state.py                    # CallState dataclass
 │   │   └── output.py                   # Structured output generation
-│   ├── frontend/                       # Browser-based audio capture
+│   ├── frontend/                       # Browser-based UI (planned)
 │   │   ├── index.html
-│   │   └── audio.js
-│   └── main.py                         # Entry point
-├── tests/
-│   ├── simulated_conversations/        # Test scenarios
-│   └── test_tool_handlers.py
-└── output/                             # Generated call outputs
+│   │   └── app.ts
+│   └── main.py                         # Entry point (--simulate, --sideband)
+├── output/                             # Generated call outputs (gitignored)
+├── .env.example                        # Environment template
+└── pyproject.toml                      # Python dependencies
 ```
 
 ## Key Technical Decisions

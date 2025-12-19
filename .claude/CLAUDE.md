@@ -46,6 +46,14 @@ This is a voice AI system for geriatric patient intake. Read `docs/PROJECT_SPEC.
 - **Sideband pattern**: Both frontend and backend connect to the same Realtime session
 - **Text simulation**: `--simulate` mode for rapid iteration without audio/frontend
 
+### Frontend-Backend Communication Flow
+1. Browser establishes WebRTC connection to OpenAI, gets `call_id` from `Location` header
+2. Browser sends `call_id` to Python backend via HTTP POST
+3. Python backend connects to same session via `wss://api.openai.com/v1/realtime?call_id={call_id}`
+4. Python backend sends session.update with tools and instructions
+5. Python backend handles all tool calls, updates state
+6. Python backend streams state updates to browser via WebSocket for live display
+
 ## Critical: Realtime API Documentation
 
 We target the **GA interface** (not beta). The local documentation in `docs/realtime-api/` is authoritative.
@@ -55,6 +63,7 @@ Key files to consult:
 - `docs/realtime-api/realtime-prompting.md` - System prompt structure, conversation flow patterns
 - `docs/realtime-api/realtime-costs.md` - Token management, truncation, caching
 - `docs/realtime-api/developer-notes.md` - Developer notes with development guidance
+- `docs/realtime-api/realtime-server-controls.md` - Sideband WebSocket connection patterns
 
 If documentation is missing or you need current information, tell the user to update it from:
 - https://platform.openai.com/docs/guides/realtime
@@ -72,7 +81,13 @@ If documentation is missing or you need current information, tell the user to up
 
 ## Environment
 
-API key is stored in environment variable:
+API key is loaded from `.env` file (uses python-dotenv):
+```bash
+cp .env.example .env
+# Edit .env with your API key
+```
+
+Or export directly:
 ```bash
 export OPENAI_API_KEY="sk-..."
 ```
@@ -99,11 +114,31 @@ export OPENAI_API_KEY="sk-..."
 3. Update state.py if new data fields needed
 4. Update coverage tracking if it's a required topic
 
-### Testing a conversation
+### Testing a conversation (text mode)
 ```bash
-python src/main.py --simulate
+python -m src.main --simulate
 ```
 This runs with text input (no audio) for rapid iteration.
+
+### Running the web server (voice mode)
+```bash
+python -m src.main --server --port 8080
+```
+Starts the web UI at http://localhost:8080 for browser-based voice testing.
+- Serves the frontend UI
+- Handles WebRTC sideband connections automatically
+- Supports multiple concurrent testers
+
+For deployment on a VM:
+```bash
+python -m src.main --server --host 0.0.0.0 --port 80
+```
+
+### Running with sideband (manual)
+```bash
+python -m src.main --sideband <call_id>
+```
+Connects to an existing WebRTC session by call ID (rarely needed - server mode handles this).
 
 ### Debugging tool calls
 Tool calls are logged to console. Check:

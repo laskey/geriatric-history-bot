@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geriatric Intake - Voice AI Test Console</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Geriatric Intake Voice AI</h1>
+            <p class="subtitle">Test Console</p>
+        </header>
+
+        <main>
+            <!-- Call Controls -->
+            <section class="call-controls">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Ready to start</span>
+                </div>
+                <button id="callButton" class="call-button">
+                    <span class="button-icon">&#9679;</span>
+                    <span class="button-text">Start Call</span>
+                </button>
+            </section>
+
+            <div class="main-content">
+                <!-- Left Column: Transcript -->
+                <section class="transcript-panel">
+                    <h2>Live Transcript</h2>
+                    <div class="transcript-container" id="transcript">
+                        <div class="transcript-placeholder">
+                            Conversation will appear here when the call starts...
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right Column: CGA Form -->
+                <section class="form-panel">
+                    <h2>Comprehensive Geriatric Assessment</h2>
+                    <div class="form-container" id="cgaForm">
+                        <!-- Topic Progress -->
+                        <div class="topic-progress" id="topicProgress">
+                            <span class="topic" data-topic="referral_reason">Referral</span>
+                            <span class="topic" data-topic="social_history">Social</span>
+                            <span class="topic" data-topic="adl_status">ADLs</span>
+                            <span class="topic" data-topic="iadl_status">IADLs</span>
+                            <span class="topic" data-topic="review_of_systems">ROS</span>
+                        </div>
+
+                        <!-- Form Sections -->
+                        <div class="form-section">
+                            <h3>Patient Information</h3>
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label>Name</label>
+                                    <div class="field-value" id="patientName">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Speaker</label>
+                                    <div class="field-value" id="speakerType">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Referral Reason</h3>
+                            <div class="field-value multiline" id="referralReason">-</div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Social History</h3>
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label>Living Situation</label>
+                                    <div class="field-value" id="livingSituation">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Support System</label>
+                                    <div class="field-value" id="supportSystem">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Activities/Hobbies</label>
+                                    <div class="field-value" id="activities">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Goals of Care</label>
+                                    <div class="field-value" id="goalsOfCare">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Functional Status - ADLs</h3>
+                            <div class="adl-grid" id="adlGrid">
+                                <div class="adl-item" data-adl="bathing">
+                                    <span class="adl-name">Bathing</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-adl="dressing">
+                                    <span class="adl-name">Dressing</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-adl="eating">
+                                    <span class="adl-name">Eating</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-adl="ambulation">
+                                    <span class="adl-name">Ambulation</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-adl="transfers">
+                                    <span class="adl-name">Transfers</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-adl="toileting">
+                                    <span class="adl-name">Toileting</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                            </div>
+                            <div class="form-field" style="margin-top: 0.5rem;">
+                                <label>Notes</label>
+                                <div class="field-value" id="adlNotes">-</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Functional Status - IADLs</h3>
+                            <div class="adl-grid" id="iadlGrid">
+                                <div class="adl-item" data-iadl="shopping">
+                                    <span class="adl-name">Shopping</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-iadl="meal_preparation">
+                                    <span class="adl-name">Meals</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-iadl="housework">
+                                    <span class="adl-name">Housework</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-iadl="managing_finances">
+                                    <span class="adl-name">Finances</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-iadl="medication_management">
+                                    <span class="adl-name">Medications</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                                <div class="adl-item" data-iadl="driving_transportation">
+                                    <span class="adl-name">Transport</span>
+                                    <span class="adl-status">-</span>
+                                </div>
+                            </div>
+                            <div class="form-field" style="margin-top: 0.5rem;">
+                                <label>Notes</label>
+                                <div class="field-value" id="iadlNotes">-</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Review of Systems</h3>
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label>Memory</label>
+                                    <div class="field-value" id="rosMemory">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Mood</label>
+                                    <div class="field-value" id="rosMood">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Falls</label>
+                                    <div class="field-value" id="rosFalls">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Sleep</label>
+                                    <div class="field-value" id="rosSleep">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Pain</label>
+                                    <div class="field-value" id="rosPain">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Assistive Equipment</h3>
+                            <div class="form-grid" id="equipmentGrid">
+                                <div class="form-field">
+                                    <label>Gait Aid</label>
+                                    <div class="field-value" id="equipmentGaitAid">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Hearing Aids</label>
+                                    <div class="field-value" id="equipmentHearingAids">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Glasses</label>
+                                    <div class="field-value" id="equipmentGlasses">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Grab Bars</label>
+                                    <div class="field-value" id="equipmentGrabBars">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Shower Chair</label>
+                                    <div class="field-value" id="equipmentShowerChair">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Raised Toilet</label>
+                                    <div class="field-value" id="equipmentRaisedToilet">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Hospital Bed</label>
+                                    <div class="field-value" id="equipmentHospitalBed">-</div>
+                                </div>
+                                <div class="form-field">
+                                    <label>Oxygen</label>
+                                    <div class="field-value" id="equipmentOxygen">-</div>
+                                </div>
+                            </div>
+                            <div class="form-field" style="margin-top: 0.5rem;">
+                                <label>Other Equipment</label>
+                                <div class="field-value" id="equipmentOther">-</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Medications</h3>
+                            <div class="list-container" id="medicationsList">
+                                <div class="list-placeholder">No medications recorded</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Allergies</h3>
+                            <div class="list-container" id="allergiesList">
+                                <div class="list-placeholder">No allergies recorded</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Medical History</h3>
+                            <div class="list-container" id="medicalHistoryList">
+                                <div class="list-placeholder">No history recorded</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section urgent-section" id="urgentSection" style="display: none;">
+                            <h3>Urgent Concerns</h3>
+                            <div class="list-container urgent" id="urgentList">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Actions -->
+            <section class="actions" id="actionsSection" style="display: none;">
+                <button id="downloadButton" class="action-button">
+                    Download Report (JSON)
+                </button>
+            </section>
+        </main>
+
+        <footer>
+            <p>Voice AI Test Console - For clinical evaluation only</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
