@@ -2,19 +2,53 @@
 
 This file provides context and instructions for Claude Code when working on this project.
 
+## Documentation Maintenance
+
+**Keep documentation current.** When making significant changes to architecture, adding new patterns, or discovering important information:
+- Update this file (CLAUDE.md) with new instructions or patterns
+- Update `docs/PROJECT_SPEC.md` if requirements or architecture change
+- Update `docs/realtime-api/` if you learn new API behaviors
+- Remove outdated information rather than letting it accumulate
+
 ## Project Context
 
 This is a voice AI system for geriatric patient intake. Read `docs/PROJECT_SPEC.md` for full details.
 
 **Key points:**
-- Uses OpenAI Realtime API (NOT regular Chat Completions)
+- Uses OpenAI Realtime API GA interface (NOT beta, NOT Chat Completions)
+- Model: `gpt-realtime` (not mini for POC)
 - Conducts pre-appointment phone conversations with elderly patients
 - Extracts structured data via tool calls during conversation
 - Maps output to a Comprehensive Geriatric Assessment form
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              Browser (TypeScript Agents SDK)                │
+│         WebRTC connection to OpenAI Realtime API            │
+└─────────────────────────────────────────────────────────────┘
+                               │
+                    Same Realtime Session
+                               │
+┌─────────────────────────────────────────────────────────────┐
+│            Python Backend (Sideband WebSocket)              │
+│  • Connects to same session via WebSocket                   │
+│  • Receives and handles all tool calls                      │
+│  • Manages CallState                                        │
+│  • Coverage tracking                                        │
+│  • Structured output generation                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- **Frontend**: OpenAI Agents SDK for TypeScript handles WebRTC audio capture/playback
+- **Backend**: Python connects via sideband WebSocket to handle tools (NOT audio relay)
+- **Sideband pattern**: Both frontend and backend connect to the same Realtime session
+- **Text simulation**: `--simulate` mode for rapid iteration without audio/frontend
+
 ## Critical: Realtime API Documentation
 
-The OpenAI Realtime API has evolved significantly and may differ from training data. **Always refer to the local documentation in `docs/realtime-api/` before implementing Realtime API features.**
+We target the **GA interface** (not beta). The local documentation in `docs/realtime-api/` is authoritative.
 
 Key files to consult:
 - `docs/realtime-api/realtime-guide.md` - Core API concepts, events, session management
@@ -24,8 +58,8 @@ Key files to consult:
 
 If documentation is missing or you need current information, tell the user to update it from:
 - https://platform.openai.com/docs/guides/realtime
+- https://platform.openai.com/docs/guides/realtime-vad
 - https://cookbook.openai.com/examples/realtime_prompting_guide
-- https://platform.openai.com/docs/guides/realtime-costs
 
 ## Code Style
 
@@ -34,6 +68,14 @@ If documentation is missing or you need current information, tell the user to up
 - Type hints everywhere
 - Async/await for WebSocket operations
 - Keep functions focused and small
+- **Maintainability first**: Well-structured, easy to refactor
+
+## Environment
+
+API key is stored in environment variable:
+```bash
+export OPENAI_API_KEY="sk-..."
+```
 
 ## Key Files
 
@@ -69,19 +111,30 @@ Tool calls are logged to console. Check:
 - Are arguments being extracted correctly?
 - Is state being updated?
 
-## Realtime API Patterns
+## Realtime API Patterns (GA Interface)
 
 ### Session Configuration
 ```python
+# GA interface requires session.type and nested audio config
 await ws.send(json.dumps({
     "type": "session.update",
     "session": {
+        "type": "realtime",
+        "model": "gpt-realtime",
         "instructions": SYSTEM_PROMPT,
         "tools": TOOLS,
-        "voice": "coral",
-        "turn_detection": {
-            "type": "semantic_vad",
-            "eagerness": "low"
+        "audio": {
+            "input": {
+                "turn_detection": {
+                    "type": "semantic_vad",
+                    "eagerness": "low",
+                    "create_response": True,
+                    "interrupt_response": True
+                }
+            },
+            "output": {
+                "voice": "coral"
+            }
         }
     }
 }))
@@ -107,11 +160,12 @@ await ws.send(json.dumps({
 await ws.send(json.dumps({"type": "response.create"}))
 ```
 
-### Key Event Types
+### Key Event Types (GA naming)
 - `session.created` - Session ready, trigger opening
 - `response.function_call_arguments.done` - Tool call ready to execute
 - `conversation.item.input_audio_transcription.completed` - Patient speech transcribed
-- `response.audio_transcript.done` - AI response transcribed
+- `response.output_audio_transcript.delta` - AI response transcript streaming
+- `response.output_audio_transcript.done` - AI response transcript complete
 - `response.done` - Turn complete
 
 ## Geriatric-Specific Reminders
@@ -138,7 +192,9 @@ Cover these cases:
 ## Don't
 
 - Don't use Chat Completions API patterns - this is Realtime API
+- Don't use beta interface patterns - we use GA
 - Don't assume message history management - Realtime handles it
 - Don't add LangGraph or other frameworks without discussion
 - Don't skip the documentation check for Realtime API features
 - Don't provide medical advice in any prompt text
+- Don't relay audio through Python backend - use Agents SDK WebRTC
