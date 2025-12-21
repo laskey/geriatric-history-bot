@@ -3,3 +3,6 @@
 
 # Output files (contain PHI in production)
 output/
+
+# Cache
+**/__pycache__/
