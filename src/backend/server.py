@@ -6,12 +6,16 @@ Serves:
 - Ephemeral API key generation for secure WebRTC connections
 - HTTP endpoint for initiating sideband connections
 - WebSocket endpoint for streaming state updates to browser
+- Simple password-based authentication for access control
 """
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import os
+import secrets
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +29,88 @@ from src.config.system_prompt import get_system_prompt
 from src.config.tools import TOOLS
 
 logger = logging.getLogger(__name__)
+
+# Auth configuration
+AUTH_COOKIE_NAME = "session"
+# Generate a random secret for signing cookies if not provided
+AUTH_SECRET = os.environ.get("AUTH_SECRET", secrets.token_hex(32))
+
+
+def _sign_value(value: str) -> str:
+    """Sign a value with HMAC for cookie integrity."""
+    signature = hmac.new(
+        AUTH_SECRET.encode(),
+        value.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return f"{value}.{signature}"
+
+
+def _verify_signed_value(signed_value: str) -> str | None:
+    """Verify a signed value and return the original if valid."""
+    if "." not in signed_value:
+        return None
+    value, signature = signed_value.rsplit(".", 1)
+    expected = hmac.new(
+        AUTH_SECRET.encode(),
+        value.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    if hmac.compare_digest(signature, expected):
+        return value
+    return None
+
+
+def _is_authenticated(request: web.Request) -> bool:
+    """Check if the request has a valid auth cookie."""
+    cookie = request.cookies.get(AUTH_COOKIE_NAME)
+    if not cookie:
+        return False
+    value = _verify_signed_value(cookie)
+    return value == "authenticated"
+
+
+def _get_access_password() -> str | None:
+    """Get the access password from environment."""
+    return os.environ.get("ACCESS_PASSWORD")
+
+
+@web.middleware
+async def auth_middleware(request: web.Request, handler):
+    """
+    Middleware to enforce authentication on protected routes.
+
+    Public routes (no auth required):
+    - /login (GET and POST)
+    - /static/* (CSS, JS files needed for login page)
+
+    Protected routes (auth required):
+    - Everything else
+    """
+    # Public paths that don't require auth
+    public_paths = ["/login"]
+
+    # Allow static files (needed for login page styling)
+    if request.path.startswith("/static/"):
+        return await handler(request)
+
+    # Allow login page
+    if request.path in public_paths:
+        return await handler(request)
+
+    # Check if auth is enabled (password is set)
+    if not _get_access_password():
+        # No password configured - allow all access
+        return await handler(request)
+
+    # Check authentication
+    if not _is_authenticated(request):
+        # Redirect to login for HTML requests, 401 for API
+        if request.path.startswith("/api/"):
+            return web.json_response({"error": "Authentication required"}, status=401)
+        raise web.HTTPFound("/login")
+
+    return await handler(request)
 
 # Store active calls by call_id
 active_calls: dict[str, "CallSession"] = {}
@@ -123,6 +209,71 @@ class CallSession:
         # Close browser websockets
         for ws in self.browser_websockets:
             await ws.close()
+
+
+async def handle_login(request: web.Request) -> web.Response:
+    """
+    Handle login page (GET) and login submission (POST).
+    """
+    if request.method == "POST":
+        # Handle login submission
+        try:
+            data = await request.post()
+            password = data.get("password", "")
+
+            expected_password = _get_access_password()
+            if not expected_password:
+                # No password configured - shouldn't happen but allow access
+                raise web.HTTPFound("/")
+
+            if password == expected_password:
+                # Success - set auth cookie and redirect to main app
+                response = web.HTTPFound("/")
+                response.set_cookie(
+                    AUTH_COOKIE_NAME,
+                    _sign_value("authenticated"),
+                    httponly=True,
+                    secure=request.secure,  # Secure in production (HTTPS)
+                    samesite="Lax",
+                )
+                return response
+            else:
+                # Wrong password - show login page with error
+                return await _serve_login_page(error="Invalid password")
+
+        except web.HTTPFound:
+            raise
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            return await _serve_login_page(error="An error occurred")
+
+    # GET request - serve login page
+    # If already authenticated, redirect to main app
+    if _is_authenticated(request):
+        raise web.HTTPFound("/")
+
+    return await _serve_login_page()
+
+
+async def _serve_login_page(error: str | None = None) -> web.Response:
+    """Serve the login page HTML."""
+    frontend_path = Path(__file__).parent.parent / "frontend" / "login.html"
+    if frontend_path.exists():
+        content = frontend_path.read_text()
+        # Inject error message if present
+        if error:
+            content = content.replace(
+                "<!-- ERROR_PLACEHOLDER -->",
+                f'<p class="error">{error}</p>'
+            )
+        else:
+            content = content.replace("<!-- ERROR_PLACEHOLDER -->", "")
+        return web.Response(text=content, content_type="text/html")
+    # Fallback if login.html doesn't exist
+    return web.Response(
+        text="<h1>Login</h1><form method='post'><input name='password' type='password'><button>Login</button></form>",
+        content_type="text/html"
+    )
 
 
 async def handle_index(request: web.Request) -> web.Response:
@@ -376,9 +527,10 @@ async def handle_get_output(request: web.Request) -> web.Response:
 
 def create_app() -> web.Application:
     """Create the aiohttp application."""
-    app = web.Application()
+    app = web.Application(middlewares=[auth_middleware])
 
     # Routes
+    app.router.add_route("*", "/login", handle_login)  # GET and POST
     app.router.add_get("/", handle_index)
     app.router.add_get("/static/{filename}", handle_static)
     app.router.add_get("/api/ephemeral-key", handle_ephemeral_key)

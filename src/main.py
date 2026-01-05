@@ -10,6 +10,7 @@ Usage:
 import argparse
 import asyncio
 import logging
+import os
 import sys
 import uuid
 from typing import Optional
@@ -214,7 +215,9 @@ def main() -> None:
             asyncio.run(run_simulation())
         elif args.server:
             from src.backend.server import run_server
-            asyncio.run(run_server(host=args.host, port=args.port))
+            # Railway (and other platforms) set PORT env var
+            port = int(os.environ.get("PORT", args.port))
+            asyncio.run(run_server(host=args.host, port=port))
         elif args.sideband:
             asyncio.run(run_sideband(args.sideband))
 
